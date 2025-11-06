@@ -1,3 +1,4 @@
+// In controllers/user.controller.js
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -7,16 +8,25 @@ import cloudinary from "../utils/cloudinary.js";
 export const register = async (req, res) => {
     try {
         const { fullname, email, phoneNumber, password, role } = req.body;
-         
+        
         if (!fullname || !email || !phoneNumber || !password || !role) {
             return res.status(400).json({
                 message: "Something is missing",
                 success: false
             });
         };
-        const file = req.file;
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+
+        // --- START FIX ---
+        // We declare cloudResponse here
+        let cloudResponse; 
+        
+        // We only try to upload if a file actually exists
+        if (req.file) { 
+            const file = req.file;
+            const fileUri = getDataUri(file); // This is now safe
+            cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+        }
+        // --- END FIX ---
 
         const user = await User.findOne({ email });
         if (user) {
@@ -34,7 +44,8 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             profile:{
-                profilePhoto:cloudResponse.secure_url,
+               
+                profilePhoto: cloudResponse ? cloudResponse.secure_url : "", 
             }
         });
 
@@ -44,6 +55,8 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        
+        return res.status(500).json({ message: "Internal Server Error", success: false }); 
     }
 }
 export const login = async (req, res) => {
@@ -116,7 +129,7 @@ export const updateProfile = async (req, res) => {
         const { fullname, email, phoneNumber, bio, skills } = req.body;
         
         const file = req.file;
-      
+        
         const fileUri = getDataUri(file);
         const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
 
@@ -142,10 +155,10 @@ export const updateProfile = async (req, res) => {
         if(bio) user.profile.bio = bio
         if(skills) user.profile.skills = skillsArray
       
-  
+       
         if(cloudResponse){
-            user.profile.resume = cloudResponse.secure_url 
-            user.profile.resumeOriginalName = file.originalname 
+            user.profile.resume = cloudResponse.secure_url // save the cloudinary url
+            user.profile.resumeOriginalName = file.originalname // Save the original file name
         }
 
 
