@@ -25,7 +25,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:8000"],
+    origin: process.env.NODE_ENV === "production" 
+            ? "https://jobportal-fx7j.onrender.com"  
+            : ["http://localhost:5173", "http://localhost:8000"],
     credentials: true,
   })
 );
